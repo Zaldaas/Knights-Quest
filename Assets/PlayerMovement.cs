@@ -9,11 +9,15 @@ public class PlayerMovement : MonoBehaviour
     Transform modelTransform;
     Transform legTransform;
     Transform leg1Transform;
-    float moveForce = 2;
-    float jumpForce = 5;
+    float moveForce = 6.6f;
+    float jumpForce = 5f;
     bool isFacingRight = false;
-    public float delay = .3f;
+    public float delay = 0.3f;
     private bool attackBlocked;
+
+    // Input variables
+    float horizontalInput;
+    bool jumpInput;
 
     // Start is called before the first frame update
     void Start()
@@ -28,9 +32,17 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        rb.AddForce(transform.right * moveForce * Input.GetAxis("Horizontal"), ForceMode2D.Force);
-        
-        if(rb.velocity.magnitude > .01f)
+        // Handle input in Update
+        horizontalInput = Input.GetAxis("Horizontal");
+
+        if ((Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Space)) && 
+            IsGrounded() && !DeathZone.IsGameOver)
+        {
+            jumpInput = true;
+        }
+
+        // Update animation state
+        if (rb.velocity.magnitude > 0.01f)
         {
             anim.SetBool("isRunning", true);
         }
@@ -38,21 +50,29 @@ public class PlayerMovement : MonoBehaviour
         {
             anim.SetBool("isRunning", false);
         }
-        
-        bool movingLeft = Input.GetAxis("Horizontal") < 0;
-        bool movingRight = Input.GetAxis("Horizontal") > 0;
 
-        if(movingLeft || movingRight)
+        // Handle character flipping
+        bool movingLeft = horizontalInput < 0;
+        bool movingRight = horizontalInput > 0;
+
+        if (movingLeft || movingRight)
         {
             FlipCharacter(movingRight);
         }
+    }
 
-        bool isntJumping = GetComponent<Rigidbody2D>().velocity.y == 0;
+    // FixedUpdate is called at a fixed interval and is independent of frame rate
+    void FixedUpdate()
+    {
+        // Apply movement force
+        rb.AddForce(transform.right * moveForce * horizontalInput, ForceMode2D.Force);
 
-        if((Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Space)) && isntJumping && !DeathZone.IsGameOver)
+        // Handle jump in FixedUpdate to ensure consistent physics behavior
+        if (jumpInput)
         {
             rb.AddForce(transform.up * jumpForce, ForceMode2D.Impulse);
             anim.SetTrigger("Jump");
+            jumpInput = false;
         }
     }
 
@@ -65,7 +85,12 @@ public class PlayerMovement : MonoBehaviour
             modelTransform.localScale = theScale;
 
             isFacingRight = !isFacingRight;
-
         }
+    }
+
+    bool IsGrounded()
+    {
+        // Implement your ground check logic here
+        return Mathf.Abs(rb.velocity.y) < 0.01f;
     }
 }
